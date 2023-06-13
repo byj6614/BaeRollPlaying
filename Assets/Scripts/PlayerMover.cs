@@ -6,9 +6,12 @@ using UnityEngine.InputSystem;
 
 public class PlayerMover : MonoBehaviour
 {
+    [SerializeField] bool debug;
     [SerializeField] float runSpeed;
     [SerializeField] float walkSpeed;
     [SerializeField] float jumpSpeed;
+    [SerializeField] float walkStepRange;
+    [SerializeField] float runStepRange;
 
     private CharacterController controller;
     private Animator ani;
@@ -27,7 +30,7 @@ public class PlayerMover : MonoBehaviour
         Move();
         Fall();
     }
-
+    float lastStepTime = 0.5f;
     private void Move()
     {
         if (moveDir.magnitude == 0)
@@ -53,6 +56,24 @@ public class PlayerMover : MonoBehaviour
         ani.SetFloat("MoveSpeed", curSpeed);
         Quaternion lookRotation = Quaternion.LookRotation(forwardVec * moveDir.z + rightVec * moveDir.x);
         transform.rotation = Quaternion.Lerp(transform.rotation,lookRotation,  0.2f);
+
+        lastStepTime -= Time.deltaTime;
+        if (lastStepTime < 0)
+        {
+            lastStepTime = 0.5f;
+            GenerateFootStepSound();
+        }
+            
+    }
+
+    private void GenerateFootStepSound()
+    {
+        Collider[] colliders = Physics.OverlapSphere(transform.position,walk? walkStepRange : runStepRange);
+        foreach(Collider collider in colliders)
+        {
+            IListenable listenable = collider.GetComponent<IListenable>();
+            listenable?.Listen(transform);
+        }
     }
     private void OnWalk(InputValue value)
     {
@@ -80,5 +101,15 @@ public class PlayerMover : MonoBehaviour
     private void OnJump(InputValue value)
     {
         Jump();
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+
+        if(!debug)
+            return;
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(transform.position, walkStepRange);
+        Gizmos.DrawWireSphere(transform.position, runStepRange);
     }
 }

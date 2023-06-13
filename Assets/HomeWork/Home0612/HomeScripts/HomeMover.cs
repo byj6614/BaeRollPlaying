@@ -6,9 +6,12 @@ using UnityEngine.InputSystem;
 
 public class HomeMover : MonoBehaviour
 {
+    [SerializeField] bool debug;
     [SerializeField] float runSpeed;//최대속도
     [SerializeField] float walkSpeed;//걸을때 속도
     [SerializeField] float jumpSpeed;//점프 위력
+    [SerializeField] float walkStepRange;
+    [SerializeField] float runStepRange;
 
     private CharacterController control;
     private Animator ani;
@@ -27,6 +30,8 @@ public class HomeMover : MonoBehaviour
         Move();
         Fall();
     }
+
+    float lastStepTime = 0.5f;
     private void Move()
     {
         if(moveDir.magnitude==0)//움직임이 멈췄을 때
@@ -55,6 +60,23 @@ public class HomeMover : MonoBehaviour
         //캐릭터가 바라보는 위치를 구하기위해서 Quaternion으로 교정
         transform.rotation = Quaternion.Lerp(transform.rotation, lookRotation, 0.2f);
         //Lerp를 통해서 부자연스럽게 돌리는 것보단 자연스럽게 돌아가도록 설정
+
+
+        lastStepTime -= Time.deltaTime;
+        if (lastStepTime < 0)
+        {
+            lastStepTime = 0.5f;
+            GenerateFootStepSound();
+        }
+    }
+    private void GenerateFootStepSound()
+    {
+        Collider[] colliders = Physics.OverlapSphere(transform.position, walk ? walkStepRange : runStepRange);
+        foreach (Collider collider in colliders)
+        {
+            IHlisten listenable = collider.GetComponent<IHlisten>();
+            listenable?.HListen(transform);
+        }
     }
     private void OnMove(InputValue value)
     {
@@ -80,5 +102,14 @@ public class HomeMover : MonoBehaviour
     private void OnWalk(InputValue value)//걷기키가 눌렸을경우 true 아닐경우 flase
     {
         walk = value.isPressed;
+    }
+    private void OnDrawGizmosSelected()
+    {
+
+        if (!debug)
+            return;
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(transform.position, walkStepRange);
+        Gizmos.DrawWireSphere(transform.position, runStepRange);
     }
 }
